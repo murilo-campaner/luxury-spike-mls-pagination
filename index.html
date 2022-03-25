@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>POC - MLS Search Pagination</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="content"></div>
+    <script type="text/javascript" src="./request-mock.js"></script>
+    <script type="text/javascript">
+
+      const fetchItems = (cursor = null) => fetch('http://localhost:8090/fetch', {
+          method: 'post',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            esRequest: requestMock,
+            cursor: cursor
+          })
+        }).then(response => response.json())
+
+      const renderCards = (cards) => {
+        const domContent = document.querySelector(".content");
+        cards.forEach(cardEl => {
+          const listingKey = cardEl._source.listing_key;
+          const link = document.createElement('a');
+          link.href = '/details.html';
+          link.style.backgroundImage = `url(https://unsplash.it/400/400?random&${listingKey})`;
+          link.innerHTML = listingKey;
+
+          const card = document.createElement('div');
+          card.classList.add('card');
+          
+          card.appendChild(link)
+          domContent.appendChild(card);
+        })
+      }
+
+      const fetchAndRender = async () => {
+        return debounce(() => {
+          const state = getStateFromHash() || {};
+          const response = await fetchItems(state.cursor);
+          
+          const { cursor, cards } = response;
+          const encryptedState = encrypt({ ...state, cursor });
+
+          changeHash(encryptedState);
+          renderCards(cards);
+
+        }, 2000, true)
+      }
+
+      const onCardClick = (event) => {
+        console.log(getStateFromHash());
+        const parent = event.target.parentNode;
+        const isCardClick = parent && parent.classList.contains('card');
+        
+        if (isCardClick) {
+          event.preventDefault();
+          
+          const scrollPos = window.scrollY;
+          const containerHeight = document.querySelector('.content').offsetHeight;
+          const state = getStateFromHash();
+          
+          const newState = {
+            ...state,
+            scrollPos: scrollPos,
+            containerHeight: containerHeight
+          }
+          
+          changeHash(encrypt(newState));
+        }
+      }
+      
+      // check if we are at the bottom of the container
+      const onScroll = () => {
+        const OFFSET = 500;
+        const isScrollNextToBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - OFFSET);
+        if (isScrollNextToBottom) {
+          fetchAndRender();
+        }
+      }
+
+      const encrypt = (object) => btoa(JSON.stringify(object));
+      const decrypt = (string) => JSON.parse(atob(string));
+
+      const changeHash = (hash) => {
+        window.location.hash = `#${hash}`
+      }
+
+      const getStateFromHash = () => {
+        const hash = getUrlHash();
+        const state = hash ? decrypt(hash.substring(1)) : null;
+        return state;
+      }
+
+      const getUrlHash = () => {
+        const url_ob = new URL(document.URL);
+        return url_ob.hash;
+      }
+
+      const debounce = (func, wait, immediate) => {
+        let timeout;
+        return function() {
+          const context = this, args = arguments;
+          const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+          };
+          const callNow = immediate && !timeout;
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+          if (callNow) func.apply(context, args);
+        };
+      };
+      
+      document.addEventListener("DOMContentLoaded", async function() {
+        document.addEventListener('scroll', onScroll);
+        document.addEventListener('click', onCardClick);
+        await fetchAndRender();
+      })
+    </script>
+
+  </body>
+</html>

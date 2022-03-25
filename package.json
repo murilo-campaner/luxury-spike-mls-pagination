@@ -1,0 +1,12 @@
+{
+  "name": "mls-search-pagination",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Murilo Campaner",
+  "license": "MIT",
+  "dependencies": {
+    "@elastic/elasticsearch": "7",
+    "cors": "^2.8.5",
+    "express": "^4.17.3"
+  }
+}
