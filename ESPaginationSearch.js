@@ -1,5 +1,6 @@
 const { Client } = require('@elastic/elasticsearch')
-const client = new Client({ node: 'https://vpc-mls-search-staging-b6qaefbcrk7nasietpeumhsusi.us-east-1.es.amazonaws.com:443' });
+const env = require('dotenv').config().parsed;
+const client = new Client({ node: env.ES_PATH });
 
 function ESPaginationSearch ({ client, request, sortCursor = { begin: [], end: []} }) {
   this.direction = 'forward';
